@@ -168,13 +168,13 @@ for i, row in enumerate(rows, start=2):
     email = row[1] if len(row) > 1 else ""
     status = row[5] if len(row) > 5 else ""
 
-    if score in ["Hot", "Warm"] and reply.strip() and status != "Sent":
+    if score in ["Hot", "Warm"] and reply.strip() and not status.strip():
         print("\n--- Email to", name, "(" + email + ") ---")
         print(reply)
         choice = input("Send this email? (y/n): ").strip().lower()
 
         if choice == "y":
-            ok = send_email(gmail, email, "Re: Your inquiry", reply)
+            ok = send_email(gmail, email, f"Thanks for your inquiry, {name}", reply)
             if ok:
                 sheets.spreadsheets().values().update(
                     spreadsheetId=SHEET_ID,
@@ -184,5 +184,10 @@ for i, row in enumerate(rows, start=2):
                 ).execute()
                 print("   email sent ✅")
         else:
+            sheets.spreadsheets().values().update(
+                spreadsheetId=SHEET_ID,
+                range=f"Sheet1!F{i}",
+                valueInputOption="RAW",
+                body={"values": [["Skipped"]]},
+            ).execute()
             print("   skipped")
-            
