@@ -129,7 +129,7 @@ sheets = build("sheets", "v4", credentials=creds)
 gmail = build("gmail", "v1", credentials=creds)
 
 result = sheets.spreadsheets().values().get(
-    spreadsheetId=SHEET_ID, range="Sheet1!A2:F"
+    spreadsheetId=SHEET_ID, range="Sheet1!A2:G"
 ).execute()
 rows = result.get("values", [])
 
@@ -138,6 +138,8 @@ for i, row in enumerate(rows, start=2):
     message = row[2] if len(row) > 2 else ""
     reply = row[3] if len(row) > 3 else ""
     score = row[4] if len(row) > 4 else ""
+    if not name.strip() or not message.strip():
+        continue
 
     # 1) Score: sirf tab banao jab pehle se na ho
     if not score.strip():
@@ -164,16 +166,22 @@ for i, row in enumerate(rows, start=2):
             ).execute()
             print("   reply saved")
             
-                # 3) Email: sirf Hot/Warm, reply tayyar ho, aur pehle na bheji ho
+                    # 3) Email: approval ab Google Sheet ke checkbox se
     email = row[1] if len(row) > 1 else ""
     status = row[5] if len(row) > 5 else ""
+    approve = row[6] if len(row) > 6 else ""
 
-    if score in ["Hot", "Warm"] and reply.strip() and not status.strip():
-        print("\n--- Email to", name, "(" + email + ") ---")
-        print(reply)
-        choice = input("Send this email? (y/n): ").strip().lower()
+    if score in ["Hot", "Warm"] and reply.strip():
+        if not status.strip():
+            sheets.spreadsheets().values().update(
+                spreadsheetId=SHEET_ID,
+                range=f"Sheet1!F{i}",
+                valueInputOption="RAW",
+                body={"values": [["Pending"]]},
+            ).execute()
+            print("   waiting for approval in Sheet")
 
-        if choice == "y":
+        elif status == "Pending" and approve.upper() == "TRUE":
             ok = send_email(gmail, email, f"Thanks for your inquiry, {name}", reply)
             if ok:
                 sheets.spreadsheets().values().update(
@@ -183,11 +191,3 @@ for i, row in enumerate(rows, start=2):
                     body={"values": [["Sent"]]},
                 ).execute()
                 print("   email sent ✅")
-        else:
-            sheets.spreadsheets().values().update(
-                spreadsheetId=SHEET_ID,
-                range=f"Sheet1!F{i}",
-                valueInputOption="RAW",
-                body={"values": [["Skipped"]]},
-            ).execute()
-            print("   skipped")

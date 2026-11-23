@@ -1,16 +1,18 @@
 # AI Lead Automation (Google Sheets + Gemini + Gmail)
 
 An AI system that reads incoming leads from a Google Sheet, scores each one,
-writes a personalized reply, and sends it by Gmail after human approval.
+writes a personalized reply, and sends it by Gmail only after approval in the Sheet.
 
 ## What it does
 
 1. Reads leads (name, email, message) from a Google Sheet
 2. Scores each lead with Gemini AI: **Hot / Warm / Cold / Spam**
-3. Writes a professional AI reply for Hot and Warm leads only
-4. Shows each reply and asks for approval (y/n) before sending
-5. Sends the email through the Gmail API and marks the lead as **Sent**
-6. Skips leads that are already scored, replied to, or sent (no duplicates)
+3. Writes a professional AI reply for Hot and Warm leads only, and marks them **Pending**
+4. The client reviews the reply in the Sheet and ticks the **Approve** checkbox
+5. On the next run, approved replies are sent through the Gmail API and marked **Sent**
+6. Skips empty rows and leads that are already scored, replied to, or sent (no duplicates)
+
+No terminal input is needed: everything is controlled from the Google Sheet.
 
 ## Reliability
 
@@ -20,8 +22,11 @@ writes a personalized reply, and sends it by Gmail after human approval.
 
 ## Sheet layout
 
-| name | email | message | AI Reply | Score | Status |
-|------|-------|---------|----------|-------|--------|
+| name | email | message | AI Reply | Score | Status | Approve |
+|------|-------|---------|----------|-------|--------|---------|
+
+Status values: `Pending` (waiting for approval), `Sent`, `Skipped`.
+The Approve column uses Google Sheets checkboxes (Insert > Checkbox).
 
 ## Tech stack
 
