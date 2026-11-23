@@ -1,42 +1,22 @@
 import os
 import time
-import base64
+import smtplib
 from email.message import EmailMessage
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 load_dotenv()
 client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY"),
-    http_options=types.HttpOptions(timeout=60000),  # 60 second se zyada intezar nahi
+    http_options=types.HttpOptions(timeout=60000),
 )
 
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/gmail.send",
-]
-
 SHEET_ID = "14tx-UkT7YManDz8KcbGLrPtYfjgzUbyAOfEBryFLzZs"
-
-
-def get_credentials():
-    creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
-            creds = flow.run_local_server(port=0)
-        with open("token.json", "w") as f:
-            f.write(creds.to_json())
-    return creds
+GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 
 
 def score_lead(message):
@@ -53,14 +33,12 @@ Message: {message}
 
 Reply with only one word: Hot, Warm, Cold, or Spam."""
 
-    models = ["gemini-3.5-flash-lite", "gemini-3.6-flash"]  # pehla busy ho to doosra
+    models = ["gemini-3.5-flash-lite", "gemini-3.6-flash"]
 
-    for attempt in range(1, 4):  # 3 round
+    for attempt in range(1, 4):
         for model in models:
             try:
-                response = client.models.generate_content(
-                    model=model, contents=prompt
-                )
+                response = client.models.generate_content(model=model, contents=prompt)
                 answer = (response.text or "").strip()
                 if answer in ["Hot", "Warm", "Cold", "Spam"]:
                     return answer
@@ -71,6 +49,7 @@ Reply with only one word: Hot, Warm, Cold, or Spam."""
             time.sleep(15)
 
     return "Unknown"
+
 
 def generate_reply(name, message, score):
     prompt = f"""You are a friendly, professional assistant for Sattar Awan,
@@ -97,9 +76,7 @@ Do not invent prices, discounts or guarantees. Write only the email body."""
     for attempt in range(1, 4):
         for model in models:
             try:
-                response = client.models.generate_content(
-                    model=model, contents=prompt
-                )
+                response = client.models.generate_content(model=model, contents=prompt)
                 reply = (response.text or "").strip()
                 if reply:
                     return reply
@@ -110,23 +87,38 @@ Do not invent prices, discounts or guarantees. Write only the email body."""
 
     return ""
 
-def send_email(gmail, to, subject, body):
+
+def send_email(to, subject, body):
     msg = EmailMessage()
+    msg["From"] = GMAIL_ADDRESS
     msg["To"] = to
     msg["Subject"] = subject
     msg.set_content(body)
 
-    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-
     try:
-        gmail.users().messages().send(userId="me", body={"raw": raw}).execute()
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as server:
+            server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
+            server.send_message(msg)
         return True
     except Exception as e:
         print("   send failed:", str(e)[:80])
         return False
-creds = get_credentials()
+
+
+def update_cell(sheets, cell, value):
+    sheets.spreadsheets().values().update(
+        spreadsheetId=SHEET_ID,
+        range=f"Sheet1!{cell}",
+        valueInputOption="RAW",
+        body={"values": [[value]]},
+    ).execute()
+
+
+creds = service_account.Credentials.from_service_account_file(
+    "service_account.json",
+    scopes=["https://www.googleapis.com/auth/spreadsheets"],
+)
 sheets = build("sheets", "v4", credentials=creds)
-gmail = build("gmail", "v1", credentials=creds)
 
 result = sheets.spreadsheets().values().get(
     spreadsheetId=SHEET_ID, range="Sheet1!A2:G"
@@ -134,60 +126,38 @@ result = sheets.spreadsheets().values().get(
 rows = result.get("values", [])
 
 for i, row in enumerate(rows, start=2):
-    name = row[0]
+    name = row[0] if len(row) > 0 else ""
+    email = row[1] if len(row) > 1 else ""
     message = row[2] if len(row) > 2 else ""
     reply = row[3] if len(row) > 3 else ""
     score = row[4] if len(row) > 4 else ""
+    status = row[5] if len(row) > 5 else ""
+    approve = row[6] if len(row) > 6 else ""
+
     if not name.strip() or not message.strip():
         continue
 
-    # 1) Score: sirf tab banao jab pehle se na ho
+    # 1) Score
     if not score.strip():
         score = score_lead(message)
-        sheets.spreadsheets().values().update(
-            spreadsheetId=SHEET_ID,
-            range=f"Sheet1!E{i}",
-            valueInputOption="RAW",
-            body={"values": [[score]]},
-        ).execute()
+        update_cell(sheets, f"E{i}", score)
         print(name, "->", score)
     else:
         print(name, "-> already scored:", score)
 
-    # 2) Reply: sirf Hot/Warm ko, aur sirf tab jab pehle se na ho
+    # 2) Reply (sirf Hot/Warm)
     if score in ["Hot", "Warm"] and not reply.strip():
         reply = generate_reply(name, message, score)
         if reply:
-            sheets.spreadsheets().values().update(
-                spreadsheetId=SHEET_ID,
-                range=f"Sheet1!D{i}",
-                valueInputOption="RAW",
-                body={"values": [[reply]]},
-            ).execute()
+            update_cell(sheets, f"D{i}", reply)
             print("   reply saved")
-            
-                    # 3) Email: approval ab Google Sheet ke checkbox se
-    email = row[1] if len(row) > 1 else ""
-    status = row[5] if len(row) > 5 else ""
-    approve = row[6] if len(row) > 6 else ""
 
+    # 3) Approval aur email
     if score in ["Hot", "Warm"] and reply.strip():
         if not status.strip():
-            sheets.spreadsheets().values().update(
-                spreadsheetId=SHEET_ID,
-                range=f"Sheet1!F{i}",
-                valueInputOption="RAW",
-                body={"values": [["Pending"]]},
-            ).execute()
+            update_cell(sheets, f"F{i}", "Pending")
             print("   waiting for approval in Sheet")
-
         elif status == "Pending" and approve.upper() == "TRUE":
-            ok = send_email(gmail, email, f"Thanks for your inquiry, {name}", reply)
-            if ok:
-                sheets.spreadsheets().values().update(
-                    spreadsheetId=SHEET_ID,
-                    range=f"Sheet1!F{i}",
-                    valueInputOption="RAW",
-                    body={"values": [["Sent"]]},
-                ).execute()
+            if send_email(email, f"Thanks for your inquiry, {name}", reply):
+                update_cell(sheets, f"F{i}", "Sent")
                 print("   email sent ✅")
