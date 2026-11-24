@@ -3,31 +3,14 @@
   "nodes": [
     {
       "parameters": {
-        "promptType": "define",
-        "text": "=You are a lead qualification assistant for a freelancer who offers AI automation services (invoice data extraction, Gmail AI auto-reply, AI chatbots).\n\nClassify this lead message into exactly ONE category:\n- Hot: clear need, mentions quantity, budget, price or deadline, ready to buy\n- Warm: interested, asks about services, but gives no specific details\n- Cold: vague, unrelated to our services, or very low intent\n- Spam: advertising, scams, suspicious links, promotions\n\nMessage: {{ $json.message }}\n\nReply with only one word: Hot, Warm, Cold, or Spam.",
-        "batching": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.9,
-      "position": [
-        288,
-        0
-      ],
-      "id": "25e01ee6-4e1a-4376-870c-863eab394f9e",
-      "name": "Basic LLM Chain",
-      "retryOnFail": true,
-      "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
         "modelName": "models/gemini-3.5-flash-lite",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1.1,
       "position": [
-        576,
-        256
+        752,
+        384
       ],
       "id": "f9334bac-8767-4958-b2b2-c66901be237b",
       "name": "Google Gemini Chat Model",
@@ -53,7 +36,7 @@
       "typeVersion": 1.4,
       "position": [
         0,
-        0
+        400
       ],
       "id": "66055d70-a54d-4b27-9324-01f0d7c9f656",
       "name": "Schedule Trigger"
@@ -80,8 +63,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        368,
-        144
+        224,
+        400
       ],
       "id": "252de27e-83a4-48d5-aad8-c2eb2c8b005c",
       "name": "Get row(s) in sheet",
@@ -89,6 +72,26 @@
         "googleApi": {
           "id": "zKbprWhSsRVzi6XT",
           "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1552,
+        240
+      ],
+      "id": "542b223a-cd56-4d1c-992d-98ba14073d1e",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "aEhDoXojupJsxZRM",
+          "name": "Google Gemini(PaLM) Api account"
         }
       }
     },
@@ -130,11 +133,28 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.4,
       "position": [
-        848,
-        224
+        448,
+        256
       ],
       "id": "956f35c1-f151-48cd-8305-195886abcbd7",
-      "name": "Filter"
+      "name": "New Leads"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a lead qualification assistant for a freelancer who offers AI automation services (invoice data extraction, Gmail AI auto-reply, AI chatbots).\n\nClassify this lead message into exactly ONE category:\n- Hot: clear need, mentions quantity, budget, price or deadline, ready to buy\n- Warm: interested, asks about services, but gives no specific details\n- Cold: vague, unrelated to our services, or very low intent\n- Spam: advertising, scams, suspicious links, promotions\n\nMessage: {{ $json.message }}\n\nReply with only one word: Hot, Warm, Cold, or Spam.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        672,
+        144
+      ],
+      "id": "25e01ee6-4e1a-4376-870c-863eab394f9e",
+      "name": "Score Lead",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -157,7 +177,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "row_number": "={{ $('Filter').item.json.row_number }}",
+            "row_number": "={{ $('New Leads').item.json.row_number }}",
             "Score": "={{ ['Hot','Warm','Cold','Spam'].includes($json.text.trim()) ? $json.text.trim() : 'Unknown' }}"
           },
           "matchingColumns": [
@@ -254,11 +274,11 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        656,
-        0
+        1024,
+        256
       ],
       "id": "2473a185-5276-415e-ba5e-f6ce3d7f6da3",
-      "name": "Update row in sheet",
+      "name": "Save Score",
       "credentials": {
         "googleApi": {
           "id": "zKbprWhSsRVzi6XT",
@@ -302,46 +322,26 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.4,
       "position": [
-        816,
-        0
+        1248,
+        112
       ],
       "id": "2c0a3c07-3fa0-4340-93fe-b89778634bfa",
-      "name": "Filter1"
+      "name": "Hot or Warm"
     },
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a friendly, professional assistant for Sattar Awan, a freelancer who offers AI automation services:\n- AI invoice data extraction (PDF invoices to Excel)\n- Gmail AI auto-reply agents\n- AI chatbots for websites and libraries\n\nA lead named {{ $('Filter').item.json.name }} sent this message (lead type: {{ $json.Score }}):\n\"{{ $('Filter').item.json.message }}\"\n\nWrite a short, polite email reply (4-6 sentences):\n- Thank them by name\n- Answer their question as well as possible\n- If they ask about price or timeline, say it depends on the exact scope and invite them to share a few details or a sample\n- End by inviting them to reply or book a short call\n- Sign off as: Sattar Awan\n\nDo not invent prices, discounts or guarantees. Write only the email body.",
+        "text": "=You are a friendly, professional assistant for Sattar Awan, a freelancer who offers AI automation services:\n- AI invoice data extraction (PDF invoices to Excel)\n- Gmail AI auto-reply agents\n- AI chatbots for websites and libraries\n\nA lead named {{ $('New Leads').item.json.name }} sent this message (lead type: {{ $json.Score }}):\n\"{{ $('New Leads').item.json.message }}\"\n\nWrite a short, polite email reply (4-6 sentences):\n- Thank them by name\n- Answer their question as well as possible\n- If they ask about price or timeline, say it depends on the exact scope and invite them to share a few details or a sample\n- End by inviting them to reply or book a short call\n- Sign off as: Sattar Awan\n\nDo not invent prices, discounts or guarantees. Write only the email body.",
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.9,
       "position": [
-        1040,
+        1472,
         0
       ],
       "id": "73a03384-95f3-4254-b0eb-8b0fd0feb974",
-      "name": "Basic LLM Chain1"
-    },
-    {
-      "parameters": {
-        "modelName": "models/gemini-3.5-flash-lite",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1.2,
-      "position": [
-        1120,
-        208
-      ],
-      "id": "542b223a-cd56-4d1c-992d-98ba14073d1e",
-      "name": "Google Gemini Chat Model1",
-      "credentials": {
-        "googlePalmApi": {
-          "id": "aEhDoXojupJsxZRM",
-          "name": "Google Gemini(PaLM) Api account"
-        }
-      }
+      "name": "Write Reply"
     },
     {
       "parameters": {
@@ -364,7 +364,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "row_number": "={{ $('Filter').item.json.row_number }}",
+            "row_number": "={{ $('New Leads').item.json.row_number }}",
             "AI Reply": "={{ $json.text }}",
             "Status": "Pending"
           },
@@ -455,15 +455,75 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        1312,
-        0
+        1824,
+        112
       ],
       "id": "31d3599b-00d9-42c8-815b-cf12e6870b50",
-      "name": "Update row in sheet1",
+      "name": "Save Reply",
       "credentials": {
         "googleApi": {
           "id": "zKbprWhSsRVzi6XT",
           "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "67a515f8-e3be-4dce-98c8-e694fe8cb203",
+              "leftValue": "={{ $json.Score }}",
+              "rightValue": "Hot",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        1248,
+        400
+      ],
+      "id": "4e2e7fc9-c1cf-4a0a-a2ef-3a2ea0dd3d13",
+      "name": "Is Hot"
+    },
+    {
+      "parameters": {
+        "fromEmail": "sattarawan19@gmail.com",
+        "toEmail": "sattarawan19@gmail.com",
+        "subject": "=🔥 HOT LEAD: {{ $('New Leads').item.json.name }}",
+        "emailFormat": "text",
+        "text": "=A new HOT lead just arrived. Reply soon!\n\nName: {{ $('New Leads').item.json.name }}\nEmail: {{ $('New Leads').item.json.email }}\nMessage: {{ $('New Leads').item.json.message }}\n\nAn AI reply is being prepared. Review and approve it in the Sheet:\nhttps://docs.google.com/spreadsheets/d/14tx-UkT7YManDz8KcbGLrPtYfjgzUbyAOfEBryFLzZs",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1536,
+        400
+      ],
+      "id": "182411ed-31f7-4930-bb23-32d5b7e73f37",
+      "name": "Hot Lead Alert",
+      "webhookId": "f09f16ae-d8ec-4147-bdf7-e18898afef6f",
+      "credentials": {
+        "smtp": {
+          "id": "NbY2cJZFbk4J6B1C",
+          "name": "SMTP account"
         }
       }
     },
@@ -504,11 +564,11 @@
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.4,
       "position": [
-        592,
-        400
+        448,
+        544
       ],
       "id": "786c8fae-667a-4afa-80ff-b009d935f342",
-      "name": "Filter2"
+      "name": "Approved Leads"
     },
     {
       "parameters": {
@@ -517,16 +577,18 @@
         "subject": "=Thanks for your inquiry, {{ $json.name }}",
         "emailFormat": "text",
         "text": "={{ $json['AI Reply'] }}",
-        "options": {}
+        "options": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        816,
-        400
+        736,
+        544
       ],
       "id": "34aaee06-e6fa-4500-8462-ba2bdf384b25",
-      "name": "Send an Email",
+      "name": "Send Reply",
       "webhookId": "622a0b6f-c82f-4fc5-8f75-ec145add7a7a",
       "credentials": {
         "smtp": {
@@ -556,7 +618,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "row_number": "={{ $('Filter2').item.json.row_number }}",
+            "row_number": "={{ $('Approved Leads').item.json.row_number }}",
             "Status": "Sent"
           },
           "matchingColumns": [
@@ -646,11 +708,11 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        1040,
-        400
+        1024,
+        544
       ],
       "id": "c236158c-74de-4963-bc09-989ae9411e4d",
-      "name": "Update row in sheet2",
+      "name": "Mark Sent",
       "credentials": {
         "googleApi": {
           "id": "zKbprWhSsRVzi6XT",
@@ -665,19 +727,8 @@
       "ai_languageModel": [
         [
           {
-            "node": "Basic LLM Chain",
+            "node": "Score Lead",
             "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Basic LLM Chain": {
-      "main": [
-        [
-          {
-            "node": "Update row in sheet",
-            "type": "main",
             "index": 0
           }
         ]
@@ -698,45 +749,12 @@
       "main": [
         [
           {
-            "node": "Filter",
+            "node": "New Leads",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Filter2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filter": {
-      "main": [
-        [
-          {
-            "node": "Basic LLM Chain",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Update row in sheet": {
-      "main": [
-        [
-          {
-            "node": "Filter1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filter1": {
-      "main": [
-        [
-          {
-            "node": "Basic LLM Chain1",
+            "node": "Approved Leads",
             "type": "main",
             "index": 0
           }
@@ -747,40 +765,100 @@
       "ai_languageModel": [
         [
           {
-            "node": "Basic LLM Chain1",
+            "node": "Write Reply",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Basic LLM Chain1": {
+    "New Leads": {
       "main": [
         [
           {
-            "node": "Update row in sheet1",
+            "node": "Score Lead",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Filter2": {
+    "Score Lead": {
       "main": [
         [
           {
-            "node": "Send an Email",
+            "node": "Save Score",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Send an Email": {
+    "Save Score": {
       "main": [
         [
           {
-            "node": "Update row in sheet2",
+            "node": "Hot or Warm",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Hot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hot or Warm": {
+      "main": [
+        [
+          {
+            "node": "Write Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Reply": {
+      "main": [
+        [
+          {
+            "node": "Save Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Hot": {
+      "main": [
+        [
+          {
+            "node": "Hot Lead Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved Leads": {
+      "main": [
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reply": {
+      "main": [
+        [
+          {
+            "node": "Mark Sent",
             "type": "main",
             "index": 0
           }
@@ -788,12 +866,16 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Karachi",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
-  "versionId": "625a2f07-cb9b-401b-ae31-888d686bcf52",
+  "versionId": "19c34e3b-468e-44db-b01d-b8f980954dd6",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "e7b8a2dd3cc6d8e4c7da30b781658fbc9ea6da66a63dc7089e5a1cbc5fba171a"
