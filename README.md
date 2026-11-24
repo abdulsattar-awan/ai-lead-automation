@@ -2,7 +2,7 @@
 
 An AI system that reads incoming leads from a Google Sheet, scores each one,
 writes a personalized reply, and sends it by Gmail only after approval in the Sheet.
-It runs every hour on GitHub Actions, with no laptop needed.
+Built twice: as a Python script that runs on GitHub Actions, and as a visual n8n workflow.
 
 ## What it does
 
@@ -15,10 +15,10 @@ It runs every hour on GitHub Actions, with no laptop needed.
 
 ## Reliability
 
-- Runs every hour in the cloud with GitHub Actions
+- Python version runs on a schedule with GitHub Actions (GitHub may delay scheduled runs)
 - Google service account for Sheets and a Gmail app password, so access never expires
 - Request timeout, retries, and a backup Gemini model when one is busy
-- Failed AI calls are marked "Unknown" instead of crashing the run
+- Unexpected AI answers are marked "Unknown" instead of breaking the Sheet
 
 ## Sheet layout
 
@@ -30,9 +30,9 @@ Status values: `Pending`, `Sent`, `Skipped`. The Approve column uses Google Shee
 ## Tech stack
 
 Python, Google Sheets API (service account), Gmail SMTP (app password),
-Google Gemini (google-genai), GitHub Actions
+Google Gemini (google-genai), GitHub Actions, n8n
 
-## Setup
+## Setup (Python)
 
 1. In Google Cloud, enable the Google Sheets API and create a service account with a JSON key. Save it as `service_account.json`
 2. Share your Google Sheet with the service account email as an Editor
@@ -43,6 +43,14 @@ Google Gemini (google-genai), GitHub Actions
 7. Run: `python lead_scorer.py`
 
 For GitHub Actions, add `GEMINI_API_KEY`, `GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD` and `SERVICE_ACCOUNT_JSON` as repository secrets.
+
+## n8n version
+
+The same system as a visual n8n workflow: `n8n/ai_lead_processor.json`
+
+Flow: Schedule Trigger → Google Sheets (get rows) → Filter (new leads) → Gemini (score) → Update Score → Filter (Hot/Warm) → Gemini (reply) → Update AI Reply + Pending. A second branch picks rows that are Pending and approved, sends the email by SMTP, and marks them Sent.
+
+Import it in n8n with **Import from File**, then add your own credentials: Google Service Account (Sheets), Google Gemini API, and SMTP (Gmail app password).
 
 ## Author
 
