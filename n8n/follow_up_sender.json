@@ -1,0 +1,428 @@
+{
+  "name": "Follow Up Sender",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -592,
+        -32
+      ],
+      "id": "3891bbb4-20a3-4158-bb51-8ee772d4023b",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "14tx-UkT7YManDz8KcbGLrPtYfjgzUbyAOfEBryFLzZs",
+          "mode": "list",
+          "cachedResultName": "Lead Automation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14tx-UkT7YManDz8KcbGLrPtYfjgzUbyAOfEBryFLzZs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14tx-UkT7YManDz8KcbGLrPtYfjgzUbyAOfEBryFLzZs/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -416,
+        -32
+      ],
+      "id": "e34687bf-ca26-48a6-925a-9446e4d31fa7",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleApi": {
+          "id": "zKbprWhSsRVzi6XT",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "06ddccc4-4f7f-48f2-ba7b-dfbc561ab6d4",
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "Sent",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "f0b105f5-3c77-4f85-932b-945191df2bfe",
+              "leftValue": "={{ $json.Replied }}",
+              "rightValue": "False",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "182ffad5-c4a4-446f-8b6f-7e4a0b44dc23",
+              "leftValue": "={{ $json['Follow Up'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "7976e3b9-7a38-49c3-9bb2-ed38499b68c2",
+              "leftValue": "={{ $json['Sent Date'] ? $now.diff(DateTime.fromISO($json['Sent Date']), 'days').days : 0 }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        -240,
+        -32
+      ],
+      "id": "240bd22e-0ed2-45c4-a6a3-1704e944f67c",
+      "name": "Due for Follow Up"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        160,
+        160
+      ],
+      "id": "ce897976-1b79-4265-8740-6ce96761a3f0",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "aEhDoXojupJsxZRM",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a short, polite follow-up email to {{ $json.name }}.\nThey contacted us 3 or more days ago with this message: \"{{ $json.message }}\"\nWe already replied once, but they have not answered yet.\n\nRules:\n- 3 to 4 sentences only.\n- Friendly and helpful, not pushy.\n- Gently remind them we are happy to help with their request.\n- Ask one simple question that is easy to answer.\n- Do not invent prices, links, phone numbers, or meeting times.\n- Start with \"Hi {{ $json.name }},\" and sign off as \"Best regards, Sattar Awan\".\n- Output only the email body, nothing else.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -64,
+        -32
+      ],
+      "id": "3117e7e5-6c75-4523-a092-e18092a78c93",
+      "name": "Write Follow Up"
+    },
+    {
+      "parameters": {
+        "fromEmail": "sattarawan19@gmail.com",
+        "toEmail": "={{ $('Due for Follow Up').item.json.email }}",
+        "subject": "=Thanks for your inquiry, {{ $('Due for Follow Up').item.json.name }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        -32
+      ],
+      "id": "b9a21159-48f0-4d06-a4b9-d2d7a73bd3ca",
+      "name": "Send Follow Up",
+      "webhookId": "5bfbdba9-9d86-45bc-a2df-7d6d705353ad",
+      "credentials": {
+        "smtp": {
+          "id": "NbY2cJZFbk4J6B1C",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "14tx-UkT7YManDz8KcbGLrPtYfjgzUbyAOfEBryFLzZs",
+          "mode": "list",
+          "cachedResultName": "Lead Automation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14tx-UkT7YManDz8KcbGLrPtYfjgzUbyAOfEBryFLzZs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14tx-UkT7YManDz8KcbGLrPtYfjgzUbyAOfEBryFLzZs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Due for Follow Up').item.json.row_number }}",
+            "Follow Up": "={{ $now.toFormat('yyyy-MM-dd') }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "AI Reply",
+              "displayName": "AI Reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Approve",
+              "displayName": "Approve",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Sent Date",
+              "displayName": "Sent Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Replied",
+              "displayName": "Replied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Follow Up",
+              "displayName": "Follow Up",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        464,
+        -32
+      ],
+      "id": "53c3907b-9fa9-4f34-b5b4-80c6a821ad4c",
+      "name": "Mark Follow Up",
+      "credentials": {
+        "googleApi": {
+          "id": "zKbprWhSsRVzi6XT",
+          "name": "Google Service Account account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Due for Follow Up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Due for Follow Up": {
+      "main": [
+        [
+          {
+            "node": "Write Follow Up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write Follow Up",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Follow Up": {
+      "main": [
+        [
+          {
+            "node": "Send Follow Up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Follow Up": {
+      "main": [
+        [
+          {
+            "node": "Mark Follow Up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Karachi",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "2bc3e476-6d19-4368-9e66-b35deb9088f2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e7b8a2dd3cc6d8e4c7da30b781658fbc9ea6da66a63dc7089e5a1cbc5fba171a"
+  },
+  "nodeGroups": [],
+  "id": "y9CSNhFBmgHdBoay",
+  "tags": []
+}

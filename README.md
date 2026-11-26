@@ -61,3 +61,4 @@ Sattar Awan | [GitHub](https://github.com/abdulsattar-awan)
 - **Daily Lead Report:** every evening at 6 PM (Pakistan time) you get one email with totals: Hot, Warm, Cold, Spam, waiting for approval, and sent.
 
 Both workflows are in the `n8n/` folder and can be imported into any n8n instance.
+- **Automatic follow-up:** every morning at 10 AM, leads that got a reply 3 or more days ago and have not answered (Replied checkbox not ticked) receive one short, polite AI-written follow-up. The date is saved in the Follow Up column so no lead gets it twice.

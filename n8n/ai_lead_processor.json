@@ -331,7 +331,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=You are a friendly, professional assistant for Sattar Awan, a freelancer who offers AI automation services:\n- AI invoice data extraction (PDF invoices to Excel)\n- Gmail AI auto-reply agents\n- AI chatbots for websites and libraries\n\nA lead named {{ $('New Leads').item.json.name }} sent this message (lead type: {{ $json.Score }}):\n\"{{ $('New Leads').item.json.message }}\"\n\nWrite a short, polite email reply (4-6 sentences):\n- Thank them by name\n- Answer their question as well as possible\n- If they ask about price or timeline, say it depends on the exact scope and invite them to share a few details or a sample\n- End by inviting them to reply or book a short call\n- Sign off as: Sattar Awan\n\nDo not invent prices, discounts or guarantees. Write only the email body.",
+        "text": "=You are a friendly, professional assistant for Sattar Awan, a freelancer who offers AI automation services:\n- AI invoice data extraction (PDF invoices to Excel)\n- Gmail AI auto-reply systems\n- AI lead scoring and reply automation with Google Sheets\n- AI assistants and chatbots that answer questions from documents\n\nA potential client named {{ $('New Leads').item.json.name }} sent this message:\n\"{{ $('New Leads').item.json.message }}\"\n\nThis lead was scored as: {{ $json.Score }}\n\nWrite a short reply email to this person.\n\nRules:\n- Start with \"Hi {{ $('New Leads').item.json.name }},\"\n- Thank them for reaching out and show that you understood their need.\n- If the lead is Hot, sound ready to start soon. If it is Warm, be helpful and informative.\n- Ask for one or two details you would need to understand the project.\n- Keep it to 4 to 6 sentences.\n- Do not invent prices, discounts or guarantees.\n- Do not mention any links, booking pages, or attachments, because none are included in the email.\n- Sign off as \"Best regards, Sattar Awan\".\n- Write only the email body.",
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
@@ -619,7 +619,8 @@
           "mappingMode": "defineBelow",
           "value": {
             "row_number": "={{ $('Approved Leads').item.json.row_number }}",
-            "Status": "Sent"
+            "Status": "Sent",
+            "Sent Date": "={{ $now.toFormat('yyyy-MM-dd') }}"
           },
           "matchingColumns": [
             "row_number"
@@ -632,7 +633,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": true
             },
             {
               "id": "email",
@@ -641,7 +643,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": true
             },
             {
               "id": "message",
@@ -650,7 +653,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": true
             },
             {
               "id": "AI Reply",
@@ -659,7 +663,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": true
             },
             {
               "id": "Score",
@@ -668,7 +673,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": true
             },
             {
               "id": "Status",
@@ -677,7 +683,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "Approve",
@@ -686,7 +693,38 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Sent Date",
+              "displayName": "Sent Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Replied",
+              "displayName": "Replied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Follow Up",
+              "displayName": "Follow Up",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
             },
             {
               "id": "row_number",
@@ -875,7 +913,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "19c34e3b-468e-44db-b01d-b8f980954dd6",
+  "versionId": "13eb9ae4-2696-494f-9200-5016dd6a69de",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "e7b8a2dd3cc6d8e4c7da30b781658fbc9ea6da66a63dc7089e5a1cbc5fba171a"
