@@ -1,0 +1,151 @@
+{
+  "name": "Daily Lead Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "3d56b1a3-2d10-4c75-8f92-5e8402c2a662",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "14tx-UkT7YManDz8KcbGLrPtYfjgzUbyAOfEBryFLzZs",
+          "mode": "list",
+          "cachedResultName": "Lead Automation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14tx-UkT7YManDz8KcbGLrPtYfjgzUbyAOfEBryFLzZs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14tx-UkT7YManDz8KcbGLrPtYfjgzUbyAOfEBryFLzZs/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -112,
+        0
+      ],
+      "id": "0f905537-59bb-4988-9a40-d7764b2431e2",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleApi": {
+          "id": "zKbprWhSsRVzi6XT",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sirf wo rows jin mein naam likha ho\nconst rows = $input.all().map(item => item.json).filter(r => r.name);\n\nconst count = (column, value) => rows.filter(r => r[column] === value).length;\n\nreturn [{\n  json: {\n    total: rows.length,\n    hot: count('Score', 'Hot'),\n    warm: count('Score', 'Warm'),\n    cold: count('Score', 'Cold'),\n    spam: count('Score', 'Spam'),\n    pending: count('Status', 'Pending'),\n    sent: count('Status', 'Sent'),\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        0
+      ],
+      "id": "02938b66-229e-4c29-80ee-da2c40c8a91a",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "fromEmail": "sattarawan19@gmail.com",
+        "toEmail": "sattarawan19@gmail.com",
+        "subject": "=📊 Daily Lead Report: {{ $json.pending }} waiting for approval",
+        "emailFormat": "text",
+        "text": "=Here is your lead summary:\n\nTotal leads: {{ $json.total }}\n🔥 Hot: {{ $json.hot }}\n🙂 Warm: {{ $json.warm }}\n❄️ Cold: {{ $json.cold }}\n🚫 Spam: {{ $json.spam }}\n\n⏳ Waiting for your approval: {{ $json.pending }}\n✅ Replies sent: {{ $json.sent }}\n\nOpen the Sheet to review and approve:\nhttps://docs.google.com/spreadsheets/d/14tx-UkT7YManDz8KcbGLrPtYfjgzUbyAOfEBryFLzZs",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        336,
+        0
+      ],
+      "id": "8286d7e0-c207-4011-8802-2a597fc2e69f",
+      "name": "Send an Email",
+      "webhookId": "c4ae5106-81d2-4be9-bd28-6b90c9dc441f",
+      "credentials": {
+        "smtp": {
+          "id": "NbY2cJZFbk4J6B1C",
+          "name": "SMTP account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Karachi",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "cb10c828-e1c6-429c-adcd-68387096c361",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e7b8a2dd3cc6d8e4c7da30b781658fbc9ea6da66a63dc7089e5a1cbc5fba171a"
+  },
+  "nodeGroups": [],
+  "id": "s7hY0HuNRdlYmJjM",
+  "tags": []
+}
