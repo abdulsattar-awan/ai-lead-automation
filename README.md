@@ -55,3 +55,9 @@ Import it in n8n with **Import from File**, then add your own credentials: Googl
 ## Author
 
 Sattar Awan | [GitHub](https://github.com/abdulsattar-awan)
+## New features (n8n)
+
+- **Hot lead alert:** when a lead is scored Hot, you get an instant email with the name, message and a link to the Sheet.
+- **Daily Lead Report:** every evening at 6 PM (Pakistan time) you get one email with totals: Hot, Warm, Cold, Spam, waiting for approval, and sent.
+
+Both workflows are in the `n8n/` folder and can be imported into any n8n instance.
