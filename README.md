@@ -62,3 +62,4 @@ Sattar Awan | [GitHub](https://github.com/abdulsattar-awan)
 
 Both workflows are in the `n8n/` folder and can be imported into any n8n instance.
 - **Automatic follow-up:** every morning at 10 AM, leads that got a reply 3 or more days ago and have not answered (Replied checkbox not ticked) receive one short, polite AI-written follow-up. The date is saved in the Follow Up column so no lead gets it twice.
+- **Automatic reply detection:** n8n watches the Gmail inbox (IMAP). When a lead whose reply was Sent answers, the Replied checkbox is ticked automatically, so no follow-up is sent to someone who already replied. The owner's own emails are ignored.
